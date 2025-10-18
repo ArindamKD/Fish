@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fish Speech Communication</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #FFFFFF;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            padding: 20px;
+        }
+        
+        .svg-filters {
+            position: absolute;
+            width: 0;
+            height: 0;
+            overflow: hidden;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            height: 300px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 50px;
+            margin-bottom: 60px;
+            /* CHANGED: Pushed container down 40px more (30 + 40) */
+            margin-top: 70px;
+        }
+
+        #bubble-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            filter: url('#gooey');
+        }
+
+        .fish-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .fish {
+            position: relative;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .fish-left {
+            animation-delay: 0s;
+        }
+
+        .fish-right {
+            animation-delay: 1.5s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            25% { transform: translateY(-8px) rotate(-2deg); }
+            50% { transform: translateY(-5px) rotate(0deg); }
+            75% { transform: translateY(-10px) rotate(2deg); }
+        }
+
+        .fish svg {
+            width: 100px;
+            height: auto;
+        }
+
+        .fish-label {
+            color: #000000;
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .button-container {
+            position: absolute;
+            bottom: 20px; 
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+        }
+
+        .speak-button {
+            padding: 12px 28px;
+            font-size: 15px;
+            font-weight: 600;
+            color: white;
+            /* CHANGED: Button to sea blue */
+            background: #209cee;
+            border: 2px solid #209cee;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .speak-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        .speak-button:active {
+            transform: translateY(0);
+        }
+
+        .speak-button.recording {
+             /* CHANGED: Recording state to sea blue */
+            background: #209cee;
+            color: white;
+            border-color: #209cee;
+        }
+
+        .bubble {
+            position: absolute;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.95), rgba(100, 200, 255, 0.7));
+            width: 30px; 
+            height: 30px;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        .bubble::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 6px;
+            width: 8px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            filter: blur(1px);
+        }
+
+        .bubble::after {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 12px;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            filter: blur(0.5px);
+        }
+
+        .mic-icon {
+            width: 18px;
+            height: 18px;
+            display: inline-block;
+        }
+        
+        /* --- NEW: Fish part animations --- */
+        
+        /* Blue Fish (Left) */
+        #blue-fish-rect { animation: swim-rect-blue 3s ease-in-out infinite alternate; }
+        #blue-fish-path-b5e2ff { animation: swim-b5-blue 3s ease-in-out infinite alternate; }
+        #blue-fish-path-236e9f { animation: swim-23-blue 3s ease-in-out infinite alternate; }
+        #blue-fish-eye-group { animation: swim-eye-blue 3s ease-in-out infinite alternate; }
+        #blue-fish-path-c3ccff { animation: swim-c3-blue 3s ease-in-out infinite alternate; }
+        #blue-fish-path-45a2de { animation: swim-45-blue 3s ease-in-out infinite alternate; }
+        
+        /* Yellow Fish (Right) - Flipped animations */
+        #yellow-fish-rect { animation: swim-rect-yellow 3s ease-in-out infinite alternate; }
+        #yellow-fish-path-b5e2ff { animation: swim-b5-yellow 3s ease-in-out infinite alternate; }
+        #yellow-fish-path-236e9f { animation: swim-23-yellow 3s ease-in-out infinite alternate; }
+        #yellow-fish-eye-group { animation: swim-eye-yellow 3s ease-in-out infinite alternate; }
+        #yellow-fish-path-c3ccff { animation: swim-c3-yellow 3s ease-in-out infinite alternate; }
+        #yellow-fish-path-45a2de { animation: swim-45-yellow 3s ease-in-out infinite alternate; }
+
+        /* Blue Fish Keyframes */
+        @keyframes swim-rect-blue {
+          from { transform: none; }
+          to { transform: translateX(-2px) scaleX(1.22); transform-origin: center; }
+        }
+        @keyframes swim-b5-blue {
+          from { transform: none; }
+          to { transform: translateX(-4px); }
+        }
+        @keyframes swim-23-blue {
+          from { transform: none; }
+          to { transform: translateX(4px); }
+        }
+        @keyframes swim-eye-blue {
+          from { transform: none; }
+          to { transform: translateX(-4px); }
+        }
+        @keyframes swim-c3-blue {
+          from { transform: none; }
+          to { transform: translateX(4px); }
+        }
+        @keyframes swim-45-blue {
+          from { transform: none; }
+          to { transform: translateX(2px) scaleX(0.96); transform-origin: center; }
+        }
+        
+        /* Yellow Fish Keyframes (Flipped) */
+        @keyframes swim-rect-yellow {
+          from { transform: none; }
+          to { transform: translateX(2px) scaleX(1.22); transform-origin: center; }
+        }
+        @keyframes swim-b5-yellow {
+          from { transform: none; }
+          to { transform: translateX(4px); }
+        }
+        @keyframes swim-23-yellow {
+          from { transform: none; }
+          to { transform: translateX(-4px); }
+        }
+        @keyframes swim-eye-yellow {
+          from { transform: none; }
+          to { transform: translateX(4px); }
+        }
+        @keyframes swim-c3-yellow {
+          from { transform: none; }
+          to { transform: translateX(-4px); }
+        }
+        @keyframes swim-45-yellow {
+          from { transform: none; }
+          to { transform: translateX(-2px) scaleX(0.96); transform-origin: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <svg class="svg-filters" xmlns="http://www.w3.org/2000/svg" version="1.1">
+      <defs>
+        <filter id="gooey">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+          <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="goo" />
+          <feBlend in="SourceGraphic" in2="goo" />
+        </filter>
+      </defs>
+    </svg>
+
+    <div class="container">
+        <div id="bubble-container"></div>
+    
+        <div class="fish-wrapper">
+            <div class="fish fish-left">
+                <svg xmlns="http://www.w3.org/2000/svg" width="82" height="86" viewBox="0 0 82 86" fill="none">
+                    <path id="blue-fish-path-236e9f" d="M61.0597 75.7005L65.1345 71.5157C69.7338 66.7923 69.6737 59.2468 64.9998 54.5973L60.8023 50.4218C58.4055 48.0374 54.5327 48.0375 52.1359 50.4218L51.9107 50.6458C49.6203 52.9243 49.6203 56.6311 51.9107 58.9096C54.2012 61.1881 54.1923 64.9038 51.9019 67.1823C49.6016 69.4706 49.5927 73.2023 51.893 75.4905L52.1752 75.7713C54.6405 78.2238 58.6337 78.1919 61.0597 75.7005Z" fill="#236E9F"/>
+                    <path id="blue-fish-path-c3ccff" d="M19.0597 62.7004L23.1345 58.5156C27.7338 53.7922 27.6737 46.2467 22.9998 41.5972L18.8023 37.4217C16.4055 35.0374 12.5327 35.0374 10.1359 37.4217L9.9107 37.6457C7.62027 39.9242 7.62029 43.6311 9.91073 45.9096C12.2012 48.188 12.1923 51.9037 9.90186 54.1822C7.6016 56.4705 7.59268 60.2022 9.89296 62.4905L10.1752 62.7712C12.6405 65.2237 16.6337 65.1919 19.0597 62.7004Z" fill="#C3CCFF"/>
+                    <path id="blue-fish-path-b5e2ff" d="M50.0597 79.7005L54.1345 75.5157C58.7338 70.7923 58.6737 63.2468 53.9998 58.5973L49.8023 54.4218C47.4055 52.0374 43.5327 52.0375 41.1359 54.4218L40.9107 54.6458C38.6203 56.9243 38.6203 60.6311 40.9107 62.9096C43.2012 65.1881 43.1923 68.9038 40.9019 71.1823C38.6016 73.4706 38.5927 77.2023 40.893 79.4905L41.1752 79.7713C43.6405 82.2238 47.6337 82.1919 50.0597 79.7005Z" fill="#B5E2FF"/>
+                    <path id="blue-fish-path-45a2de" d="M34.1629 15.5614L38.3477 11.4866C43.0711 6.88731 50.6166 6.94743 55.2661 11.6213L59.4416 15.8188C61.8259 18.2156 61.8259 22.0884 59.4416 24.4852L59.2175 24.7104C56.939 27.0008 53.2322 27.0008 50.9537 24.7104C48.6752 22.4199 44.9595 22.4288 42.681 24.7192C40.3927 27.0195 36.6611 27.0284 34.3728 24.7281L34.0921 24.4459C31.6396 21.9806 31.6714 17.9874 34.1629 15.5614Z" fill="#45A2DE"/>
+                    <ellipse cx="49" cy="45" rx="27" ry="27" transform="rotate(90 49 45)" fill="url(#paint0_linear_484_1043)"/>
+                    <rect id="blue-fish-rect" x="82" y="32" width="27" height="9" rx="4.5" transform="rotate(90 82 32)" fill="#8392CD"/>
+                    <g id="blue-fish-eye-group">
+                        <circle cx="55" cy="45" r="15" transform="rotate(90 55 45)" fill="#EAF7FF"/>
+                        <ellipse cx="57.4281" cy="44.2599" rx="9.5065" ry="9.50649" transform="rotate(90 57.4281 44.2599)" fill="black"/>
+                        <ellipse cx="60.4757" cy="40.4561" rx="3.16883" ry="3.16883" transform="rotate(90 60.4757 40.4561)" fill="#EAF7FF"/>
+                    </g>
+                    <defs>
+                        <linearGradient id="paint0_linear_484_1043" x1="29.5" y1="26" x2="76" y2="45" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#C1DEF6"/>
+                        <stop offset="1" stop-color="#64ADEB"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <div class="fish-label">You</div>
+        </div>
+
+        <div class="button-container">
+            <button class="speak-button" id="speakBtn">
+                <svg class="mic-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                </svg>
+                Click here to speak
+            </button>
+        </div>
+
+        <div class="fish-wrapper">
+            <div class="fish fish-right">
+                <svg xmlns="http://www.w3.org/2000/svg" width="82" height="86" viewBox="0 0 82 86" fill="none" style="transform: scaleX(-1);">
+                    <path id="yellow-fish-path-236e9f" d="M61.0597 75.7005L65.1345 71.5157C69.7338 66.7923 69.6737 59.2468 64.9998 54.5973L60.8023 50.4218C58.4055 48.0374 54.5327 48.0375 52.1359 50.4218L51.9107 50.6458C49.6203 52.9243 49.6203 56.6311 51.9107 58.9096C54.2012 61.1881 54.1923 64.9038 51.9019 67.1823C49.6016 69.4706 49.5927 73.2023 51.893 75.4905L52.1752 75.7713C54.6405 78.2238 58.6337 78.1919 61.0597 75.7005Z" fill="#F39C12"/>
+					<path id="yellow-fish-path-c3ccff" d="M19.0597 62.7004L23.1345 58.5156C27.7338 53.7922 27.6737 46.2467 22.9998 41.5972L18.8023 37.4217C16.4055 35.0374 12.5327 35.0374 10.1359 37.4217L9.9107 37.6457C7.62027 39.9242 7.62029 43.6311 9.91073 45.9096C12.2012 48.188 12.1923 51.9037 9.90186 54.1822C7.6016 56.4705 7.59268 60.2022 9.89296 62.4905L10.1752 62.7712C12.6405 65.2237 16.6337 65.1919 19.0597 62.7004Z" fill="#FFF9E6"/>
+                    <path id="yellow-fish-path-b5e2ff" d="M50.0597 79.7005L54.1345 75.5157C58.7338 70.7923 58.6737 63.2468 53.9998 58.5973L49.8023 54.4218C47.4055 52.0374 43.5327 52.0375 41.1359 54.4218L40.9107 54.6458C38.6203 56.9243 38.6203 60.6311 40.9107 62.9096C43.2012 65.1881 43.1923 68.9038 40.9019 71.1823C38.6016 73.4706 38.5927 77.2023 40.893 79.4905L41.1752 79.7713C43.6405 82.2238 47.6337 82.1919 50.0597 79.7005Z" fill="#FFF5CC"/>
+                    <path id="yellow-fish-path-45a2de" d="M34.1629 15.5614L38.3477 11.4866C43.0711 6.88731 50.6166 6.94743 55.2661 11.6213L59.4416 15.8188C61.8259 18.2156 61.8259 22.0884 59.4416 24.4852L59.2175 24.7104C56.939 27.0008 53.2322 27.0008 50.9537 24.7104C48.6752 22.4199 44.9595 22.4288 42.681 24.7192C40.3927 27.0195 36.6611 27.0284 34.3728 24.7281L34.0921 24.4459C31.6396 21.9806 31.6714 17.9874 34.1629 15.5614Z" fill="#F4D03F"/>
+                    <ellipse cx="49" cy="45" rx="27" ry="27" transform="rotate(90 49 45)" fill="url(#paint0_linear_yellow_new)"/>
+                    <rect id="yellow-fish-rect" x="82" y="32" width="27" height="9" rx="4.s" transform="rotate(90 82 32)" fill="#F5B041"/>
+                    <g id="yellow-fish-eye-group">
+                        <circle cx="55" cy="45" r="15" transform="rotate(90 55 45)" fill="#FFF9E6"/>
+                        <ellipse cx="57.4281" cy="44.2599" rx="9.5065" ry="9.50649" transform="rotate(90 57.4281 44.2599)" fill="black"/>
+                        <ellipse cx="60.4757" cy="40.4561" rx="3.16883" ry="3.16883" transform="rotate(90 60.4757 40.4561)" fill="#FFF9E6"/>
+                    </g>
+                    <defs>
+                        <linearGradient id="paint0_linear_yellow_new" x1="29.5" y1="26" x2="76" y2="45" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#FFF5CC"/>
+                        <stop offset="1" stop-color="#F4D03F"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <div class="fish-label">Receiver</div>
+        </div>
+    </div>
+
+    <script>
+        const speakBtn = document.getElementById('speakBtn');
+        const bubbleContainer = document.getElementById('bubble-container');
+        let recognition;
+        let isRecording = false;
+        
+        let currentWords = [];
+
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = (event) => {
+                const currentResult = event.results[event.results.length - 1];
+                const transcript = currentResult[0].transcript;
+                
+                const newWords = transcript.trim().split(/\s+/).filter(w => w.length > 0);
+
+                if (newWords.length > currentWords.length) {
+                    for (let i = currentWords.length; i < newWords.length; i++) {
+                        createBubble();
+                    }
+                }
+                currentWords = newWords;
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                if (isRecording) {
+                    stopRecording();
+                }
+            };
+
+            recognition.onend = () => {
+                if (isRecording) {
+                    recognition.start();
+                }
+            };
+        }
+
+        // --- UPDATED: Click listener to request permission ---
+        speakBtn.addEventListener('click', async () => {
+            if (!recognition) {
+                alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
+                return;
+            }
+
+            if (isRecording) {
+                stopRecording();
+                return; // Stop here
+            }
+
+            // --- NEW PERMISSION CHECK ---
+            try {
+                // 1. Check if mediaDevices API is available
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    alert('Your browser does not support the necessary media APIs.');
+                    return;
+                }
+
+                // 2. Request microphone access
+                // This will trigger the permission prompt
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                // Good practice: Stop the tracks immediately 
+                // if we only needed permission.
+                stream.getTracks().forEach(track => track.stop());
+
+                // 3. If permission is granted, proceed to start recording
+                startRecording();
+
+            } catch (err) {
+                // Handle errors (user denied permission, no mic, etc.)
+                console.error("Microphone access error:", err);
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    alert('You must allow microphone access to use this feature.');
+                } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                     alert('No microphone was found. Please plug one in.');
+                } else {
+                    // A common error is "NotReadableError" if another app is using the mic
+                    alert('Could not access the microphone. Is it already in use? Error: ' + err.message);
+                }
+            }
+            // --- END NEW PERMISSION CHECK ---
+        });
+
+
+        function startRecording() {
+            isRecording = true;
+            currentWords = [];
+            speakBtn.classList.add('recording');
+            speakBtn.innerHTML = `
+                <svg class="mic-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="6" width="12" height="12" rx="2"/>
+                </svg>
+                Stop
+            `;
+            recognition.start();
+        }
+
+        function stopRecording() {
+            isRecording = false;
+            currentWords = [];
+            speakBtn.classList.remove('recording');
+            speakBtn.innerHTML = `
+                <svg class="mic-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                </svg>
+                Click here to speak
+            `;
+            recognition.stop();
+        }
+
+        function createBubble() {
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            
+            const duration = (Math.random() * 1.5 + 2.5).toFixed(2); // 2.5s - 4s
+            const startTop = (140 + Math.random() * 20).toFixed(2);   // Start Y: 140px to 160px
+            const midTop = (120 + Math.random() * 40).toFixed(2);     // Mid Y (arc): 120px to 160px
+            const endTop = (140 + Math.random() * 20).toFixed(2);     // End Y: 140px to 160px
+            const startLeft = 150; // Start X (near left fish mouth)
+            const endLeft = 750;   // End X (near right fish)
+
+            const keyframeName = `shoot_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+            
+            const styleSheet = document.createElement('style');
+            styleSheet.innerHTML = `
+                @keyframes ${keyframeName} {
+                    0% { 
+                        left: ${startLeft}px; 
+                        top: ${startTop}px; 
+                        opacity: 0; 
+                        transform: scale(0.3); 
+                    }
+                    10% { 
+                        opacity: 1; 
+                        transform: scale(1); 
+                    }
+                    50% { 
+                        top: ${midTop}px; 
+                        opacity: 1; 
+                    }
+                    100% { 
+                        left: ${endLeft}px; 
+                        top: ${endTop}px; 
+                        opacity: 0; 
+                        transform: scale(0.3); 
+                    }
+                }
+            `;
+            document.head.appendChild(styleSheet);
+            
+            bubble.style.animation = `${keyframeName} ${duration}s ease-in-out forwards`;
+            
+            bubbleContainer.appendChild(bubble);
+
+            setTimeout(() => {
+                if (bubble) bubble.remove();
+                if (styleSheet) styleSheet.remove();
+            }, duration * 1000);
+        }
+    </script>
+</body>
+</html>
