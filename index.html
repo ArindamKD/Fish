@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fish Speech Communication</title>
     <style>
-        /* All your existing CSS from the previous version goes here */
-        /* ... (styles are unchanged) ... */
-
         * {
             margin: 0;
             padding: 0;
@@ -241,6 +238,7 @@
     </style>
 </head>
 <body>
+
     <svg class="svg-filters" xmlns="http://www.w3.org/2000/svg" version="1.1">
       <defs>
         <filter id="gooey">
@@ -301,7 +299,7 @@
                     <g id="yellow-fish-eye-group">
                         <circle cx="55" cy="45" r="15" transform="rotate(90 55 45)" fill="#FFF9E6"/>
                         <ellipse cx="57.4281" cy="44.2599" rx="9.5065" ry="9.50649" transform="rotate(90 57.4281 44.2599)" fill="black"/>
-                        <ellipse cx="60.4757" cy="40.4561" rx="3.16883" ry="3.16883" transform="rotate(9s0 60.4757 40.4561)" fill="#FFF9E6"/>
+                        <ellipse cx="60.4757" cy="40.4561" rx="3.16883" ry="3.16883" transform="rotate(90 60.4757 40.4561)" fill="#FFF9E6"/>
                     </g>
                     <defs>
                         <linearGradient id="paint0_linear_yellow_new" x1="29.5" y1="26" x2="76" y2="45" gradientUnits="userSpaceOnUse">
@@ -318,80 +316,99 @@
     <script>
         const speakBtn = document.getElementById('speakBtn');
         const bubbleContainer = document.getElementById('bubble-container');
-        
+        let recognition;
         let isRecording = false;
-
-        // --- NEW: Web Audio API variables ---
-        let audioContext;
-        let analyser;
-        let mediaStreamSource;
-        let volumeLoopId;
-        let isSoundDetected = false;
         
-        // --- NEW: Volume threshold ---
-        // This is the "loudness" required to trigger a bubble.
-        // Feel free to change this value! Higher = less sensitive, Lower = more sensitive.
-        const VOLUME_THRESHOLD = 30; // Value between 0-255
+        let currentWords = [];
 
-        // NEW: Click listener is now async to handle permissions
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = (event) => {
+                const currentResult = event.results[event.results.length - 1];
+                const transcript = currentResult[0].transcript;
+                
+                const newWords = transcript.trim().split(/\s+/).filter(w => w.length > 0);
+
+                if (newWords.length > currentWords.length) {
+                    for (let i = currentWords.length; i < newWords.length; i++) {
+                        createBubble();
+                    }
+                }
+                currentWords = newWords;
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                if (isRecording) {
+                    stopRecording();
+                }
+            };
+
+            recognition.onend = () => {
+                if (isRecording) {
+                    recognition.start();
+                }
+            };
+        }
+
         speakBtn.addEventListener('click', async () => {
+            if (!recognition) {
+                alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
+                return;
+            }
+
             if (isRecording) {
                 stopRecording();
-            } else {
-                // We await startRecording because it contains the permission prompt
-                await startRecording();
+                return;
             }
-        });
 
-        // NEW: startRecording function, completely rewritten
-        async function startRecording() {
             try {
-                // 1. Create AudioContext and request microphone stream
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    alert('Your browser does not support the necessary media APIs.');
+                    return;
+                }
+                
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-                // 2. Create nodes and connect them
-                mediaStreamSource = audioContext.createMediaStreamSource(stream);
-                analyser = audioContext.createAnalyser();
-                analyser.fftSize = 512; // Standard size
+                stream.getTracks().forEach(track => track.stop());
                 
-                mediaStreamSource.connect(analyser);
-
-                // 3. Prepare data array for volume analysis
-                const bufferLength = analyser.frequencyBinCount;
-                const dataArray = new Uint8Array(bufferLength);
-
-                // 4. Update UI and start the volume-checking loop
-                isRecording = true;
-                speakBtn.classList.add('recording');
-                speakBtn.innerHTML = `
-                    <svg class="mic-icon" viewBox="0 0 24 24" fill="currentColor">
-                        <rect x="6" y="6" width="12" height="12" rx="2"/>
-                    </svg>
-                    Stop
-                `;
-                
-                // 5. Start the loop
-                checkVolume(dataArray, bufferLength);
+                startRecording();
 
             } catch (err) {
-                // Handle permission errors
+                // ADDED: Log the specific error to the console for easier debugging.
                 console.error("Microphone access error:", err);
+                
                 if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
                     alert('Permission Denied: You must allow microphone access in your browser site settings to use this feature.');
                 } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
                      alert('No microphone was found. Please make sure one is connected and enabled.');
                 } else {
-                    alert('Could not access the microphone. Is it already in use by another application? Error: 'S + err.message);
+                    alert('Could not access the microphone. Is it already in use by another application? Error: ' + err.message);
                 }
-                // Reset button if permission fails
-                stopRecording();
             }
+        });
+
+
+        function startRecording() {
+            isRecording = true;
+            currentWords = [];
+            speakBtn.classList.add('recording');
+            speakBtn.innerHTML = `
+                <svg class="mic-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="6" width="12" height="12" rx="2"/>
+                </svg>
+                Stop
+            `;
+            recognition.start();
         }
 
-        // NEW: stopRecording function, completely rewritten
         function stopRecording() {
             isRecording = false;
+            currentWords = [];
             speakBtn.classList.remove('recording');
             speakBtn.innerHTML = `
                 <svg class="mic-icon" viewBox="0 0 24 24" fill="currentColor">
@@ -400,58 +417,11 @@
                 </svg>
                 Click here to speak
             `;
-
-            // Stop the volume-checking loop
-            if (volumeLoopId) {
-                cancelAnimationFrame(volumeLoopId);
+            if (recognition) {
+                 recognition.stop();
             }
-
-            // Disconnect all audio nodes and stop the microphone track
-            if (mediaStreamSource) {
-                mediaStreamSource.mediaStream.getTracks().forEach(track => track.stop());
-                mediaStreamSource.disconnect();
-            }
-            if (analyser) {
-                analyser.disconnect();
-            }
-            if (audioContext) {
-                audioContext.close();
-            }
-            
-            isSoundDetected = false; // Reset the sound detection flag
         }
 
-        // NEW: Real-time volume checking loop
-        function checkVolume(dataArray, bufferLength) {
-            if (!isRecording) return; // Stop the loop if not recording
-
-            // Get volume data
-            analyser.getByteFrequencyData(dataArray);
-            
-            // Calculate average volume
-            let sum = 0;
-            for(let i = 0; i < bufferLength; i++) {
-                sum += dataArray[i];
-            }
-            const average = sum / bufferLength;
-
-            // --- This is the trigger logic ---
-            
-            // 1. If sound is loud enough AND we haven't detected a sound yet...
-            if (average > VOLUME_THRESHOLD && !isSoundDetected) {
-                isSoundDetected = true; // Mark sound as detected
-                createBubble();         // Create one bubble
-            } 
-            // 2. If sound drops below the threshold AND we *were* detecting a sound...
-            else if (average < VOLUME_THRESHOLD && isSoundDetected) {
-                isSoundDetected = false; // Reset the flag, ready for the *next* sound
-            }
-
-            // Keep the loop going
-            volumeLoopId = requestAnimationFrame(() => checkVolume(dataArray, bufferLength));
-        }
-
-        // UNCHANGED: This function is perfect as-is
         function createBubble() {
             const bubble = document.createElement('div');
             bubble.className = 'bubble';
