@@ -40,7 +40,6 @@
             align-items: center;
             padding: 0 50px;
             margin-bottom: 60px;
-            /* CHANGED: Pushed container down 40px more (30 + 40) */
             margin-top: 70px;
         }
 
@@ -107,7 +106,6 @@
             font-size: 15px;
             font-weight: 600;
             color: white;
-            /* CHANGED: Button to sea blue */
             background: #209cee;
             border: 2px solid #209cee;
             border-radius: 50px;
@@ -129,7 +127,6 @@
         }
 
         .speak-button.recording {
-             /* CHANGED: Recording state to sea blue */
             background: #209cee;
             color: white;
             border-color: #209cee;
@@ -175,9 +172,6 @@
             display: inline-block;
         }
         
-        /* --- NEW: Fish part animations --- */
-        
-        /* Blue Fish (Left) */
         #blue-fish-rect { animation: swim-rect-blue 3s ease-in-out infinite alternate; }
         #blue-fish-path-b5e2ff { animation: swim-b5-blue 3s ease-in-out infinite alternate; }
         #blue-fish-path-236e9f { animation: swim-23-blue 3s ease-in-out infinite alternate; }
@@ -185,7 +179,6 @@
         #blue-fish-path-c3ccff { animation: swim-c3-blue 3s ease-in-out infinite alternate; }
         #blue-fish-path-45a2de { animation: swim-45-blue 3s ease-in-out infinite alternate; }
         
-        /* Yellow Fish (Right) - Flipped animations */
         #yellow-fish-rect { animation: swim-rect-yellow 3s ease-in-out infinite alternate; }
         #yellow-fish-path-b5e2ff { animation: swim-b5-yellow 3s ease-in-out infinite alternate; }
         #yellow-fish-path-236e9f { animation: swim-23-yellow 3s ease-in-out infinite alternate; }
@@ -193,7 +186,6 @@
         #yellow-fish-path-c3ccff { animation: swim-c3-yellow 3s ease-in-out infinite alternate; }
         #yellow-fish-path-45a2de { animation: swim-45-yellow 3s ease-in-out infinite alternate; }
 
-        /* Blue Fish Keyframes */
         @keyframes swim-rect-blue {
           from { transform: none; }
           to { transform: translateX(-2px) scaleX(1.22); transform-origin: center; }
@@ -219,7 +211,6 @@
           to { transform: translateX(2px) scaleX(0.96); transform-origin: center; }
         }
         
-        /* Yellow Fish Keyframes (Flipped) */
         @keyframes swim-rect-yellow {
           from { transform: none; }
           to { transform: translateX(2px) scaleX(1.22); transform-origin: center; }
@@ -304,7 +295,7 @@
                     <path id="yellow-fish-path-b5e2ff" d="M50.0597 79.7005L54.1345 75.5157C58.7338 70.7923 58.6737 63.2468 53.9998 58.5973L49.8023 54.4218C47.4055 52.0374 43.5327 52.0375 41.1359 54.4218L40.9107 54.6458C38.6203 56.9243 38.6203 60.6311 40.9107 62.9096C43.2012 65.1881 43.1923 68.9038 40.9019 71.1823C38.6016 73.4706 38.5927 77.2023 40.893 79.4905L41.1752 79.7713C43.6405 82.2238 47.6337 82.1919 50.0597 79.7005Z" fill="#FFF5CC"/>
                     <path id="yellow-fish-path-45a2de" d="M34.1629 15.5614L38.3477 11.4866C43.0711 6.88731 50.6166 6.94743 55.2661 11.6213L59.4416 15.8188C61.8259 18.2156 61.8259 22.0884 59.4416 24.4852L59.2175 24.7104C56.939 27.0008 53.2322 27.0008 50.9537 24.7104C48.6752 22.4199 44.9595 22.4288 42.681 24.7192C40.3927 27.0195 36.6611 27.0284 34.3728 24.7281L34.0921 24.4459C31.6396 21.9806 31.6714 17.9874 34.1629 15.5614Z" fill="#F4D03F"/>
                     <ellipse cx="49" cy="45" rx="27" ry="27" transform="rotate(90 49 45)" fill="url(#paint0_linear_yellow_new)"/>
-                    <rect id="yellow-fish-rect" x="82" y="32" width="27" height="9" rx="4.s" transform="rotate(90 82 32)" fill="#F5B041"/>
+                    <rect id="yellow-fish-rect" x="82" y="32" width="27" height="9" rx="4.5" transform="rotate(90 82 32)" fill="#F5B041"/>
                     <g id="yellow-fish-eye-group">
                         <circle cx="55" cy="45" r="15" transform="rotate(90 55 45)" fill="#FFF9E6"/>
                         <ellipse cx="57.4281" cy="44.2599" rx="9.5065" ry="9.50649" transform="rotate(90 57.4281 44.2599)" fill="black"/>
@@ -365,7 +356,6 @@
             };
         }
 
-        // --- UPDATED: Click listener to request permission ---
         speakBtn.addEventListener('click', async () => {
             if (!recognition) {
                 alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
@@ -374,41 +364,32 @@
 
             if (isRecording) {
                 stopRecording();
-                return; // Stop here
+                return;
             }
 
-            // --- NEW PERMISSION CHECK ---
             try {
-                // 1. Check if mediaDevices API is available
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                     alert('Your browser does not support the necessary media APIs.');
                     return;
                 }
-
-                // 2. Request microphone access
-                // This will trigger the permission prompt
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 
-                // Good practice: Stop the tracks immediately 
-                // if we only needed permission.
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 stream.getTracks().forEach(track => track.stop());
-
-                // 3. If permission is granted, proceed to start recording
+                
                 startRecording();
 
             } catch (err) {
-                // Handle errors (user denied permission, no mic, etc.)
+                // ADDED: Log the specific error to the console for easier debugging.
                 console.error("Microphone access error:", err);
+                
                 if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                    alert('You must allow microphone access to use this feature.');
+                    alert('Permission Denied: You must allow microphone access in your browser site settings to use this feature.');
                 } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-                     alert('No microphone was found. Please plug one in.');
+                     alert('No microphone was found. Please make sure one is connected and enabled.');
                 } else {
-                    // A common error is "NotReadableError" if another app is using the mic
-                    alert('Could not access the microphone. Is it already in use? Error: ' + err.message);
+                    alert('Could not access the microphone. Is it already in use by another application? Error: ' + err.message);
                 }
             }
-            // --- END NEW PERMISSION CHECK ---
         });
 
 
@@ -436,19 +417,21 @@
                 </svg>
                 Click here to speak
             `;
-            recognition.stop();
+            if (recognition) {
+                 recognition.stop();
+            }
         }
 
         function createBubble() {
             const bubble = document.createElement('div');
             bubble.className = 'bubble';
             
-            const duration = (Math.random() * 1.5 + 2.5).toFixed(2); // 2.5s - 4s
-            const startTop = (140 + Math.random() * 20).toFixed(2);   // Start Y: 140px to 160px
-            const midTop = (120 + Math.random() * 40).toFixed(2);     // Mid Y (arc): 120px to 160px
-            const endTop = (140 + Math.random() * 20).toFixed(2);     // End Y: 140px to 160px
-            const startLeft = 150; // Start X (near left fish mouth)
-            const endLeft = 750;   // End X (near right fish)
+            const duration = (Math.random() * 1.5 + 2.5).toFixed(2);
+            const startTop = (140 + Math.random() * 20).toFixed(2);
+            const midTop = (120 + Math.random() * 40).toFixed(2);
+            const endTop = (140 + Math.random() * 20).toFixed(2);
+            const startLeft = 150;
+            const endLeft = 750;
 
             const keyframeName = `shoot_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
             
