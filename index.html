@@ -34,13 +34,18 @@
             position: relative;
             width: 100%;
             max-width: 900px;
-            height: 300px;
+            /* Changed height to be viewport-based and responsive */
+            height: 30vh;
+            min-height: 250px; 
+            max-height: 300px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0 50px;
-            margin-bottom: 60px;
-            margin-top: 70px;
+            /* Changed padding to be viewport-based */
+            padding: 0 5vw;
+            /* Changed margins to be viewport-based */
+            margin-bottom: 8vh;
+            margin-top: 8vh;
         }
 
         #bubble-container {
@@ -82,13 +87,17 @@
         }
 
         .fish svg {
-            width: 100px;
+            /* Made fish size responsive with min/max */
+            width: 20vw;
+            max-width: 100px;
+            min-width: 60px;
             height: auto;
         }
 
         .fish-label {
             color: #000000;
-            font-size: 18px;
+            /* Made font size responsive */
+            font-size: clamp(14px, 2.5vw, 18px);
             font-weight: 600;
             text-align: center;
         }
@@ -99,11 +108,19 @@
             left: 50%;
             transform: translateX(-50%);
             z-index: 100;
+            /* Added flex to handle multiple buttons */
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            width: 100%;
+            max-width: 90%;
         }
 
         .speak-button {
-            padding: 12px 28px;
-            font-size: 15px;
+            /* Made padding responsive */
+            padding: clamp(10px, 1.5vh, 12px) clamp(20px, 3vw, 28px);
+            /* Made font size responsive */
+            font-size: clamp(12px, 2vw, 15px);
             font-weight: 600;
             color: white;
             background: #209cee;
@@ -115,6 +132,13 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            white-space: nowrap; /* Prevents text from wrapping on small screens */
+        }
+
+        /* Style for the new "click" button */
+        #clickBtn {
+            background: #28a745;
+            border-color: #28a745;
         }
 
         .speak-button:hover {
@@ -127,16 +151,16 @@
         }
 
         .speak-button.recording {
-            background: #209cee;
-            color: white;
-            border-color: #209cee;
+            background: #d9534f; /* Red color for recording */
+            border-color: #d9534f;
         }
 
         .bubble {
             position: absolute;
             background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.95), rgba(100, 200, 255, 0.7));
-            width: 30px; 
-            height: 30px;
+            /* Made bubble size responsive */
+            width: clamp(20px, 4vw, 30px);
+            height: clamp(20px, 4vw, 30px);
             border-radius: 50%;
             pointer-events: none;
             opacity: 0;
@@ -145,10 +169,11 @@
         .bubble::before {
             content: '';
             position: absolute;
-            top: 5px;
-            left: 6px;
-            width: 8px;
-            height: 8px;
+            /* Scaled pseudo-elements relative to bubble size */
+            top: 16%;
+            left: 20%;
+            width: 26%;
+            height: 26%;
             background: rgba(255, 255, 255, 0.8);
             border-radius: 50%;
             filter: blur(1px);
@@ -157,10 +182,11 @@
         .bubble::after {
             content: '';
             position: absolute;
-            top: 15px;
-            left: 12px;
-            width: 4px;
-            height: 4px;
+            /* Scaled pseudo-elements relative to bubble size */
+            top: 50%;
+            left: 40%;
+            width: 13%;
+            height: 13%;
             background: rgba(255, 255, 255, 0.6);
             border-radius: 50%;
             filter: blur(0.5px);
@@ -170,8 +196,10 @@
             width: 18px;
             height: 18px;
             display: inline-block;
+            flex-shrink: 0; /* Prevents icon from shrinking */
         }
         
+        /* Fish swim animations (unchanged) */
         #blue-fish-rect { animation: swim-rect-blue 3s ease-in-out infinite alternate; }
         #blue-fish-path-b5e2ff { animation: swim-b5-blue 3s ease-in-out infinite alternate; }
         #blue-fish-path-236e9f { animation: swim-23-blue 3s ease-in-out infinite alternate; }
@@ -278,12 +306,15 @@
         </div>
 
         <div class="button-container">
-            <button class="speak-button" id="speakBtn">
+            <button class="speak-button" id="micBtn">
                 <svg class="mic-icon" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
                     <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
                 </svg>
-                Click here to speak
+                Speak
+            </button>
+            <button class="speak-button" id="clickBtn">
+                Click to Speak
             </button>
         </div>
 
@@ -314,133 +345,165 @@
     </div>
 
     <script>
-        const speakBtn = document.getElementById('speakBtn');
+        const micBtn = document.getElementById('micBtn');
+        const clickBtn = document.getElementById('clickBtn'); // Get the new button
         const bubbleContainer = document.getElementById('bubble-container');
-        let recognition;
-        let isRecording = false;
         
-        let currentWords = [];
+        let isRecording = false;
 
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            recognition.lang = 'en-US';
+        // --- AudioContext variables for sound detection ---
+        let audioContext;
+        let analyser;
+        let dataArray;
+        let source;
+        let stream;
+        let animationFrameId;
+        let wasSpeaking = false;
+        const THRESHOLD = 20; // Sensitivity for sound detection. Lower is more sensitive.
 
-            recognition.onresult = (event) => {
-                const currentResult = event.results[event.results.length - 1];
-                const transcript = currentResult[0].transcript;
-                
-                const newWords = transcript.trim().split(/\s+/).filter(w => w.length > 0);
+        // --- New Button: Click to create bubble ---
+        clickBtn.addEventListener('click', createBubble);
 
-                if (newWords.length > currentWords.length) {
-                    for (let i = currentWords.length; i < newWords.length; i++) {
-                        createBubble();
-                    }
-                }
-                currentWords = newWords;
-            };
-
-            recognition.onerror = (event) => {
-                console.error('Speech recognition error:', event.error);
-                if (isRecording) {
-                    stopRecording();
-                }
-            };
-
-            recognition.onend = () => {
-                if (isRecording) {
-                    recognition.start();
-                }
-            };
-        }
-
-        speakBtn.addEventListener('click', async () => {
-            if (!recognition) {
-                alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
-                return;
-            }
-
+        // --- Mic Button: Click to detect sound ---
+        micBtn.addEventListener('click', async () => {
             if (isRecording) {
                 stopRecording();
-                return;
-            }
-
-            try {
-                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    alert('Your browser does not support the necessary media APIs.');
-                    return;
-                }
-                
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                stream.getTracks().forEach(track => track.stop());
-                
-                startRecording();
-
-            } catch (err) {
-                // ADDED: Log the specific error to the console for easier debugging.
-                console.error("Microphone access error:", err);
-                
-                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                    alert('Permission Denied: You must allow microphone access in your browser site settings to use this feature.');
-                } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-                     alert('No microphone was found. Please make sure one is connected and enabled.');
-                } else {
-                    alert('Could not access the microphone. Is it already in use by another application? Error: ' + err.message);
-                }
+            } else {
+                // We await startRecording which handles permissions
+                await startRecording();
             }
         });
 
+        async function startRecording() {
+            try {
+                // 1. Get permissions and audio stream
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                // 2. Set up AudioContext and Analyser
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                source = audioContext.createMediaStreamSource(stream);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256; // Smaller size for faster analysis
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                source.connect(analyser);
+                
+                // 3. Update UI and state
+                isRecording = true;
+                wasSpeaking = false; // Reset speaking state
+                micBtn.classList.add('recording');
+                micBtn.innerHTML = `
+                    <svg class="mic-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="6" y="6" width="12" height="12" rx="2"/>
+                    </svg>
+                    Listening...
+                `;
+                
+                // 4. Start the sound detection loop
+                detectSound();
 
-        function startRecording() {
-            isRecording = true;
-            currentWords = [];
-            speakBtn.classList.add('recording');
-            speakBtn.innerHTML = `
-                <svg class="mic-icon" viewBox="0 0 24 24" fill="currentColor">
-                    <rect x="6" y="6" width="12" height="12" rx="2"/>
-                </svg>
-                Stop
-            `;
-            recognition.start();
+            } catch (err) {
+                // Handle errors (permissions denied, no mic)
+                console.error("Microphone access error:", err);
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    alert('Permission Denied: You must allow microphone access to use this feature.');
+                } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                    alert('No microphone was found. Please make sure one is connected.');
+                } else {
+                    alert('Could not access the microphone. Error: ' + err.message);
+                }
+                // Ensure we reset the state if starting failed
+                stopRecording();
+            }
         }
 
         function stopRecording() {
             isRecording = false;
-            currentWords = [];
-            speakBtn.classList.remove('recording');
-            speakBtn.innerHTML = `
+            wasSpeaking = false;
+            
+            // 1. Stop the animation loop
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+            
+            // 2. Stop the microphone stream
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            
+            // 3. Close the AudioContext
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+
+            // 4. Clean up variables
+            analyser = null;
+            source = null;
+            dataArray = null;
+
+            // 5. Reset button UI
+            micBtn.classList.remove('recording');
+            micBtn.innerHTML = `
                 <svg class="mic-icon" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
                     <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
                 </svg>
-                Click here to speak
+                Speak
             `;
-            if (recognition) {
-                 recognition.stop();
+        }
+
+        // This function runs on every animation frame while recording
+        function detectSound() {
+            if (!isRecording || !analyser) return; // Stop if not recording
+
+            animationFrameId = requestAnimationFrame(detectSound);
+            
+            // Get frequency data
+            analyser.getByteFrequencyData(dataArray);
+            
+            // Calculate average volume
+            const sum = dataArray.reduce((a, b) => a + b, 0);
+            const avg = sum / dataArray.length;
+
+            // Check if volume is above threshold
+            if (avg > THRESHOLD && !wasSpeaking) {
+                // If we detect a *new* sound, create a bubble
+                createBubble();
+                wasSpeaking = true; // Mark as "speaking" to avoid a stream of bubbles
+            } else if (avg < THRESHOLD && wasSpeaking) {
+                // Once the sound dips, reset the flag so we can detect the *next* sound
+                wasSpeaking = false;
             }
         }
+
 
         function createBubble() {
             const bubble = document.createElement('div');
             bubble.className = 'bubble';
             
             const duration = (Math.random() * 1.5 + 2.5).toFixed(2);
-            const startTop = (140 + Math.random() * 20).toFixed(2);
-            const midTop = (120 + Math.random() * 40).toFixed(2);
-            const endTop = (140 + Math.random() * 20).toFixed(2);
-            const startLeft = 150;
-            const endLeft = 750;
+            
+            // --- Responsive Positions (using %) ---
+            // Top position: random value between 35% and 55% of the container height
+            const startTop = (45 + Math.random() * 10).toFixed(2); // 45-55%
+            const midTop = (35 + Math.random() * 20).toFixed(2);   // 35-55%
+            const endTop = (45 + Math.random() * 10).toFixed(2);     // 45-55%
+            
+            // Left position: fixed percentages to align with fish
+            const startLeft = 18; // 18% from left
+            const endLeft = 82;   // 82% from left
 
             const keyframeName = `shoot_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
             
             const styleSheet = document.createElement('style');
+            // Updated keyframes to use % for responsive positioning
             styleSheet.innerHTML = `
                 @keyframes ${keyframeName} {
                     0% { 
-                        left: ${startLeft}px; 
-                        top: ${startTop}px; 
+                        left: ${startLeft}%; 
+                        top: ${startTop}%; 
                         opacity: 0; 
                         transform: scale(0.3); 
                     }
@@ -449,12 +512,12 @@
                         transform: scale(1); 
                     }
                     50% { 
-                        top: ${midTop}px; 
+                        top: ${midTop}%; 
                         opacity: 1; 
                     }
                     100% { 
-                        left: ${endLeft}px; 
-                        top: ${endTop}px; 
+                        left: ${endLeft}%; 
+                        top: ${endTop}%; 
                         opacity: 0; 
                         transform: scale(0.3); 
                     }
@@ -466,6 +529,7 @@
             
             bubbleContainer.appendChild(bubble);
 
+            // Clean up the bubble and its stylesheet after the animation
             setTimeout(() => {
                 if (bubble) bubble.remove();
                 if (styleSheet) styleSheet.remove();
